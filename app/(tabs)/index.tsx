@@ -1,14 +1,7 @@
-import { MaterialIcons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  FlatList,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, FlatList, StyleSheet, Text, View } from "react-native";
+import TaskForm from "../../components/TaskForm";
+import TaskItem from "../../components/TaskItem";
 import { supabase } from "../../lib/supabase";
 
 type Task = {
@@ -78,45 +71,23 @@ export default function App() {
     loadTasks();
   }
 
+  function handleAddTask() {
+    addTask();
+  }
+
   return (
     <View style={styles.container}>
       <View style={headerStyles.header}>
         <Text style={headerStyles.title}>TaskFlow</Text>
       </View>
 
-      <View style={styles.inputRow}>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter Task"
-          value={task}
-          onChangeText={setTask}
-        />
-        <TouchableOpacity style={styles.addButton} onPress={addTask}>
-          <MaterialIcons name="add" size={22} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      <TaskForm task={task} setTask={setTask} onAdd={handleAddTask} />
 
       <FlatList
         data={tasks}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() => toggleTask(item)}
-            onLongPress={() => deleteTask(item.id)}
-          >
-            <View style={styles.taskRow}>
-              <MaterialIcons
-                name={item.completed ? "check-box" : "check-box-outline-blank"}
-                size={20}
-                color={item.completed ? "#2E5BBA" : "#5A6472"}
-              />
-              <Text
-                style={[styles.taskText, item.completed && styles.taskTextDone]}
-              >
-                {item.title}
-              </Text>
-            </View>
-          </TouchableOpacity>
+          <TaskItem item={item} onToggle={toggleTask} onDelete={deleteTask} />
         )}
         ListEmptyComponent={
           <Text style={styles.emptyText}>No tasks yet. Add one above!</Text>
@@ -146,40 +117,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     backgroundColor: "#fff",
-  },
-  inputRow: {
-    flexDirection: "row",
-    marginBottom: 20,
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 10,
-    marginRight: 10,
-  },
-  addButton: {
-    backgroundColor: "#2E5BBA",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  taskRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  taskText: {
-    fontSize: 15,
-  },
-  taskTextDone: {
-    textDecorationLine: "line-through",
-    color: "#aaa",
   },
   emptyText: {
     textAlign: "center",
