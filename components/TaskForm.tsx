@@ -10,12 +10,7 @@ type Props = {
 export default function TaskForm({ task, setTask, onAdd }: Props) {
   return (
     <View style={styles.inputRow}>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter Task"
-        value={task}
-        onChangeText={setTask}
-      />
+      <TextInput style={styles.input} value={task} onChangeText={setTask} />
       <TouchableOpacity style={styles.addButton} onPress={onAdd}>
         <MaterialIcons name="add" size={22} color="#fff" />
       </TouchableOpacity>

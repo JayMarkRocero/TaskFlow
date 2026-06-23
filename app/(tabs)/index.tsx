@@ -1,6 +1,15 @@
+import { MaterialIcons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-import { Alert, FlatList, StyleSheet, Text, View } from "react-native";
-import TaskForm from "../../components/TaskForm";
+import {
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Toast from "react-native-toast-message";
+import AddTaskModal from "../../components/AddTaskModal";
 import TaskItem from "../../components/TaskItem";
 import { supabase } from "../../lib/supabase";
 
@@ -11,8 +20,8 @@ type Task = {
 };
 
 export default function App() {
-  const [task, setTask] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     loadTasks();
@@ -31,21 +40,22 @@ export default function App() {
     if (data) setTasks(data);
   }
 
-  async function addTask() {
-    if (task.trim() === "") {
-      Alert.alert("Empty", "Please enter a task first");
-      return;
-    }
+  async function handleSubmitTask(title: string) {
     const { error } = await supabase
       .from("Task")
-      .insert([{ title: task.trim(), completed: false }]);
+      .insert([{ title, completed: false }]);
 
     if (error) {
-      Alert.alert("Add Error", error.message);
+      Toast.show({
+        type: "error",
+        text1: "Could not add task",
+        text2: error.message,
+      });
       return;
     }
-    setTask("");
+    setModalVisible(false);
     loadTasks();
+    Toast.show({ type: "success", text1: "Task added!" });
   }
 
   async function toggleTask(item: Task) {
@@ -65,23 +75,24 @@ export default function App() {
     const { error } = await supabase.from("Task").delete().eq("id", id);
 
     if (error) {
-      Alert.alert("Delete Error", error.message);
+      Toast.show({ type: "error", text1: "Could not delete task" });
       return;
     }
     loadTasks();
-  }
-
-  function handleAddTask() {
-    addTask();
+    Toast.show({ type: "success", text1: "Task deleted!" });
   }
 
   return (
     <View style={styles.container}>
       <View style={headerStyles.header}>
         <Text style={headerStyles.title}>TaskFlow</Text>
+        <TouchableOpacity
+          style={headerStyles.modalButton}
+          onPress={() => setModalVisible(true)}
+        >
+          <MaterialIcons name="add-circle" size={32} color="#2E5BBA" />
+        </TouchableOpacity>
       </View>
-
-      <TaskForm task={task} setTask={setTask} onAdd={handleAddTask} />
 
       <FlatList
         data={tasks}
@@ -90,9 +101,17 @@ export default function App() {
           <TaskItem item={item} onToggle={toggleTask} onDelete={deleteTask} />
         )}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>No tasks yet. Add one above!</Text>
+          <Text style={styles.emptyText}>No tasks yet. Tap + to add one!</Text>
         }
       />
+
+      <AddTaskModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSubmit={handleSubmitTask}
+      />
+
+      <Toast />
     </View>
   );
 }
@@ -104,11 +123,17 @@ const headerStyles = StyleSheet.create({
     marginBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   title: {
     fontSize: 28,
     fontWeight: "bold",
     color: "#1F2A44",
+  },
+  modalButton: {
+    padding: 4,
   },
 });
 
