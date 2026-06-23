@@ -1,30 +1,81 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  Alert,
+  FlatList,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { supabase } from "../../lib/supabase";
+
+type Task = {
+  id: string;
+  title: string;
+  completed: boolean;
+};
 
 export default function App() {
   const [task, setTask] = useState("");
-  const [tasks, setTasks] = useState<
-    { id: string; title: string; completed: boolean }[]
-  >([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
-  function handleAddTask() {
-    if (task.trim() === "") return;
-    setTasks([
-      ...tasks,
-      {
-        id: Date.now().toString(),
-        title: task,
-        completed: false,
-      },
-    ]);
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  async function loadTasks() {
+    const { data, error } = await supabase
+      .from("Task")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      Alert.alert("Load Error", error.message);
+      return;
+    }
+    if (data) setTasks(data);
+  }
+
+  async function addTask() {
+    if (task.trim() === "") {
+      Alert.alert("Empty", "Please enter a task first");
+      return;
+    }
+    const { error } = await supabase
+      .from("Task")
+      .insert([{ title: task.trim(), completed: false }]);
+
+    if (error) {
+      Alert.alert("Add Error", error.message);
+      return;
+    }
     setTask("");
+    loadTasks();
+  }
+
+  async function toggleTask(item: Task) {
+    const { error } = await supabase
+      .from("Task")
+      .update({ completed: !item.completed })
+      .eq("id", item.id);
+
+    if (error) {
+      Alert.alert("Update Error", error.message);
+      return;
+    }
+    loadTasks();
+  }
+
+  async function deleteTask(id: string) {
+    const { error } = await supabase.from("Task").delete().eq("id", id);
+
+    if (error) {
+      Alert.alert("Delete Error", error.message);
+      return;
+    }
+    loadTasks();
   }
 
   return (
@@ -40,21 +91,37 @@ export default function App() {
           value={task}
           onChangeText={setTask}
         />
-        <TouchableOpacity style={styles.addButton} onPress={handleAddTask}>
+        <TouchableOpacity style={styles.addButton} onPress={addTask}>
           <MaterialIcons name="add" size={22} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      {tasks.map((item) => (
-        <View key={item.id} style={styles.taskRow}>
-          <MaterialIcons
-            name={item.completed ? "check-box" : "check-box-outline-blank"}
-            size={20}
-            color={item.completed ? "#2E5BBA" : "#5A6472"}
-          />
-          <Text style={styles.taskText}>{item.title}</Text>
-        </View>
-      ))}
+      <FlatList
+        data={tasks}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            onPress={() => toggleTask(item)}
+            onLongPress={() => deleteTask(item.id)}
+          >
+            <View style={styles.taskRow}>
+              <MaterialIcons
+                name={item.completed ? "check-box" : "check-box-outline-blank"}
+                size={20}
+                color={item.completed ? "#2E5BBA" : "#5A6472"}
+              />
+              <Text
+                style={[styles.taskText, item.completed && styles.taskTextDone]}
+              >
+                {item.title}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>No tasks yet. Add one above!</Text>
+        }
+      />
     </View>
   );
 }
@@ -109,5 +176,15 @@ const styles = StyleSheet.create({
   },
   taskText: {
     fontSize: 15,
+  },
+  taskTextDone: {
+    textDecorationLine: "line-through",
+    color: "#aaa",
+  },
+  emptyText: {
+    textAlign: "center",
+    color: "#aaa",
+    marginTop: 40,
+    fontSize: 14,
   },
 });
